@@ -1,5 +1,9 @@
 [English](./README_EN.md) | [中文](./README.md)
 
+> ⌚ **本仓库是手表适配分支**（`watch-android-8.1`）：在手机版完整界面上适配了 Android 8.1 / API 27 的方屏手表（402×476）。
+> 功能未删减，改动说明与构建/安装步骤见 [docs/watch-android-8.1.md](docs/watch-android-8.1.md)，成品 APK 见 [Releases](https://github.com/hbhyw/NeriPlayer/releases/tag/watch-android-8.1)。
+> 基于上游 `cwuom/NeriPlayer` 的 `d61c977`，上游后续的 Now Playing 重构（#538）尚未合入。
+
 <h1 align="center">NeriPlayer (音理音理!)</h1>
 
 <div align="center">
