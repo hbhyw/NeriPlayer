@@ -64,6 +64,7 @@ FFmpeg 扩展在 `ReactiveRenderersFactory` 里本来就用 `FfmpegLibrary.isAva
 | `NowPlayingAdaptiveLayout.kt` | 新增手表档：`shouldUseNowPlayingWatchLayout()`（高度 ≤460dp）、封面 `min(宽×0.22, 高×0.14, 150dp)`（真机约 60dp），控件基准 56/64dp |
 | `NowPlayingScreen.kt` | 手表档用固定高度封面，把省下的空间让给播放控件 |
 | `HomeScreen.kt` | `screenHeightDp ≤ 420` 时用紧凑 `TopAppBar`，应用名（音理音理）移到顶部导航栏 |
+| `ExploreScreen.kt` | 同上把「探索」顶栏从 `LargeTopAppBar`(152dp) 换成普通 `TopAppBar`(64dp)：原来大标题把搜索框挤到底，平台 Tab 和内容整块被 mini 播放器盖住，看起来就是「搜索用不了」；顺带收紧搜索面板留白，并让回车键也能提交搜索（手表的搜狗输入法发 ENTER 而不是 ImeAction.Search） |
 | `LyricsScreen.kt` | 视口 <460dp 且宽 <600dp 判为紧凑：标题与歌词之间 16dp→4dp、底部控件内边距 10dp→4dp、歌词基准字号 20→17sp、当前行视口比例 0.40→0.32 |
 | `SyncedLyricsView.kt` / `AdvancedLyricsView.kt` | **关键修复**：上下渐隐遮罩（72dp / 80+196dp）在矮视口会盖住整屏歌词，导致「当前歌词看不见 / 发白」；现在矮视口下遮罩收敛为视口高度的 16%（顶部）与 20%（底部），手机/平板视口不受影响 |
 
