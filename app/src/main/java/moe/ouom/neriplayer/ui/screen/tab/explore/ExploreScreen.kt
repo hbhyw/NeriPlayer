@@ -97,6 +97,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.TopAppBarState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -119,8 +120,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalFocusManager
@@ -325,6 +332,39 @@ private fun youtubeSearchTypeIcon(type: YouTubeExploreSearchType): ImageVector {
         YouTubeExploreSearchType.SONG -> Icons.Outlined.MusicNote
         YouTubeExploreSearchType.VIDEO -> Icons.Filled.PlayCircle
         YouTubeExploreSearchType.CREATOR -> Icons.Filled.AccountCircle
+    }
+}
+
+/** 视口高度低于这个值（手表/超矮屏）时不用大标题顶栏 */
+private const val ExploreCompactAppBarMaxHeightDp = 420f
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExploreTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
+    val compactAppBar = LocalConfiguration.current.screenHeightDp <= ExploreCompactAppBarMaxHeightDp
+    val colors = TopAppBarDefaults.topAppBarColors(
+        containerColor = Color.Transparent,
+        scrolledContainerColor = Color.Transparent
+    )
+    if (compactAppBar) {
+        TopAppBar(
+            title = {
+                Text(
+                    text = stringResource(CoreCommonR.string.nav_explore),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            },
+            scrollBehavior = scrollBehavior,
+            colors = colors
+        )
+    } else {
+        LargeTopAppBar(
+            title = { Text(stringResource(CoreCommonR.string.nav_explore)) },
+            scrollBehavior = scrollBehavior,
+            colors = colors
+        )
     }
 }
 
@@ -669,8 +709,7 @@ fun ExploreScreen(
         onSearchQueryChange(normalizedQuery)
         focusManager.clearFocus()
         vm.search(keyword, displayQuery = normalizedQuery)
-        queueExploreSearchRecord(normalizedQuery)
-    }
+        queueExploreSearchRecord(normalizedQuery)    }
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = topAppBarState,
@@ -714,14 +753,8 @@ fun ExploreScreen(
             )
         },
         topBar = {
-            LargeTopAppBar(
-                title = { Text(stringResource(CoreCommonR.string.nav_explore)) },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent
-                )
-            )
+            // 手表这类超矮屏: 大标题顶栏会把搜索框 / 平台 Tab 全挤到 mini 播放器后面
+            ExploreTopAppBar(scrollBehavior)
         }
     ) { innerPadding ->
         Column(
@@ -734,7 +767,18 @@ fun ExploreScreen(
                 Modifier
                     .widthIn(max = ExploreSearchContentMaxWidth)
                     .fillMaxWidth()
-                    .padding(horizontal = searchPanelHorizontalPadding, vertical = 8.dp)
+                    .padding(
+                        horizontal = searchPanelHorizontalPadding,
+                        // 矮屏上把搜索面板的上下留白也收一收, 否则平台 Tab 会被挤出屏幕
+                        vertical = if (
+                            LocalConfiguration.current.screenHeightDp <=
+                            ExploreCompactAppBarMaxHeightDp
+                        ) {
+                            4.dp
+                        } else {
+                            8.dp
+                        }
+                    )
             ) {
                     OutlinedTextField(
                         value = searchQuery,
@@ -777,7 +821,19 @@ fun ExploreScreen(
                         }),
                         singleLine = true,
                         shape = ExploreSearchFieldShape,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            // 部分输入法(手表的搜狗)发的是回车而不是 ImeAction.Search, 这里兜一层
+                            .onPreviewKeyEvent { event ->
+                                if (event.type == KeyEventType.KeyUp &&
+                                    (event.key == Key.Enter || event.key == Key.NumPadEnter)
+                                ) {
+                                    submitExploreSearch()
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
                     )
                     ExploreSearchHistoryRow(
                         history = visibleSearchHistory,
@@ -1337,14 +1393,7 @@ private fun ExploreOfflineContent(topAppBarState: TopAppBarState) {
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = Color.Transparent,
         topBar = {
-            LargeTopAppBar(
-                title = { Text(stringResource(CoreCommonR.string.nav_explore)) },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent
-                )
-            )
+            ExploreTopAppBar(scrollBehavior)
         }
     ) { innerPadding ->
         Box(
