@@ -172,6 +172,7 @@ import moe.ouom.neriplayer.ui.haptic.HapticTextButton
 import moe.ouom.neriplayer.common.locale.LanguageManager
 import moe.ouom.neriplayer.common.logging.NPLogger
 import moe.ouom.neriplayer.util.platform.NightModeHelper
+import moe.ouom.neriplayer.watch.WatchDevice
 import moe.ouom.neriplayer.core.startup.safemode.SafeModeManager
 import moe.ouom.neriplayer.util.platform.applyOnePlusHighDensityDisplayCorrection
 import moe.ouom.neriplayer.util.platform.AMBIENT_REFRESH_RATE_IDLE_MS
@@ -303,8 +304,19 @@ private fun MainActivity.setNeriContent(
     }
 }
 
+private const val WATCH_UI_DENSITY_FACTOR = 0.8f
+
 class MainActivity : ComponentActivity() {
     private val settingsRepository by lazy { SettingsRepository(applicationContext) }
+
+    /**
+     * 手表小屏（约 290 x 350dp）需要整体缩小 UI 密度：
+     * 原始密度下一屏只放得下一行内容，缩到 0.8 后接近小号手机的观感。
+     * 用户在设置里调过的密度仍在此基准上继续生效。
+     */
+    private val watchUiDensityFactor: Float by lazy {
+        if (WatchDevice.isWatchHardware(this)) WATCH_UI_DENSITY_FACTOR else 1f
+    }
     private val startupCrashReportManager by lazy { StartupCrashReportManager(applicationContext) }
     private var externalAudioImportJob: Job? = null
     private var externalAudioMetadataHydrationJob: Job? = null
@@ -382,7 +394,7 @@ class MainActivity : ComponentActivity() {
             setNeriContent(safeModeActive = safeModeActive) {
                 val uiDensityScale by settingsRepository.uiDensityScaleFlow
                     .collectAsStateWithLifecycle(initialValue = 1.0f)
-                AppUiDensityRoot(uiDensityScale) {
+                AppUiDensityRoot(uiDensityScale * watchUiDensityFactor) {
                     val systemDark = rememberActualSystemDarkTheme()
                     val useDark = remember(systemDark) {
                         StartupThemeResolver.resolveSnapshotUseDark(
@@ -411,7 +423,7 @@ class MainActivity : ComponentActivity() {
             }
             val uiDensityScale by settingsRepository.uiDensityScaleFlow
                 .collectAsStateWithLifecycle(initialValue = 1.0f)
-            AppUiDensityRoot(uiDensityScale) {
+            AppUiDensityRoot(uiDensityScale * watchUiDensityFactor) {
                 LocalizedAppContent(language = selectedAppLanguage) {
                     val devModeEnabled by settingsRepository.devModeEnabledFlow.collectAsStateWithLifecycle(
                         initialValue = false

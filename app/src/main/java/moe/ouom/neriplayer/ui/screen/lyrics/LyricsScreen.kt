@@ -425,6 +425,9 @@ fun LyricsScreen(
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize().testTag("lyricsScreen")) {
         val portraitWidths = resolveLyricsTabletPortraitWidths(maxWidth - horizontalPadding * 2)
+        // 手表等小屏: 视口高度有限时压缩上下留白, 把空间让给歌词
+        // 手表 402x476@220dpi 经 0.8 密度缩放后约 365x432dp, 所以阈值取 460dp/600dp
+        val isCompactLyricsViewport = maxHeight < 460.dp && maxWidth < 600.dp
         // 使用填充整个屏幕, 不创建新背景, 复用现有背景
         Column(
             modifier = Modifier
@@ -723,7 +726,7 @@ fun LyricsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(if (isCompactLyricsViewport) 4.dp else 16.dp))
 
         // 歌词区域
         Box(
@@ -757,6 +760,7 @@ fun LyricsScreen(
                 isPlaying = isPlaying,
                 lowPowerRendering = lowPowerLyricsRendering,
                 useTabletLayout = isTabletLandscape,
+                compactViewport = isCompactLyricsViewport,
                 onLyricLongClick = { line -> lyricShareInitialLine = line },
                 onSeekTo = onSeekTo
             )
@@ -772,7 +776,11 @@ fun LyricsScreen(
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(
                     horizontal = if (isTabletLandscape || isTabletPortrait) 8.dp else 20.dp,
-                    vertical = if (isTabletLandscape) 6.dp else 10.dp
+                    vertical = when {
+                        isTabletLandscape -> 6.dp
+                        isCompactLyricsViewport -> 4.dp
+                        else -> 10.dp
+                    }
                 )
         ) {
             val showSecondaryCapsule = secondaryLyricsResolved &&
@@ -1345,6 +1353,7 @@ internal fun LyricsContentPane(
     isPlaying: Boolean,
     lowPowerRendering: Boolean,
     useTabletLayout: Boolean = false,
+    compactViewport: Boolean = false,
     onLyricLongClick: (LyricEntry) -> Unit,
     onSeekTo: (Long) -> Unit,
     viewport: LyricsContentViewport? = null
@@ -1381,6 +1390,13 @@ internal fun LyricsContentPane(
     }
     val effectiveRawTranslatedLyrics = if (usePhoneticTranslation) null else rawTranslatedLyrics
 
+    // 小屏歌词区高度有限, 用更小的字号让整句(含换行)和上下文都能完整显示
+    val resolvedBaseFontSizeSp = viewport?.baseFontSizeSp ?: when {
+        compactViewport -> 17f
+        useTabletLayout -> 22f
+        else -> 20f
+    }
+
     if (advancedLyricsEnabled || useTabletLayout) {
         AdvancedLyricsView(
             lyrics = lyrics,
@@ -1401,12 +1417,32 @@ internal fun LyricsContentPane(
             animateViewportScroll = isPreviewingSeek,
             playbackSpeed = playbackSpeed,
             lowPowerRendering = lowPowerRendering,
-            baseFontSizeSp = viewport?.baseFontSizeSp ?: if (useTabletLayout) 22f else 20f,
-            offset = viewport?.offset ?: if (useTabletLayout) 72.dp else 48.dp,
-            keepAliveZone = if (useTabletLayout) 128.dp else 108.dp,
-            playedLyricViewportFraction = if (useTabletLayout) 0.36f else 0.30f,
-            topFadeLength = viewport?.topFadeLength ?: if (useTabletLayout) 132.dp else 80.dp,
-            bottomFadeLength = viewport?.bottomFadeLength ?: if (useTabletLayout) 220.dp else 196.dp,
+            baseFontSizeSp = resolvedBaseFontSizeSp,
+            offset = viewport?.offset ?: when {
+                compactViewport -> 32.dp
+                useTabletLayout -> 72.dp
+                else -> 48.dp
+            },
+            keepAliveZone = when {
+                compactViewport -> 64.dp
+                useTabletLayout -> 128.dp
+                else -> 108.dp
+            },
+            playedLyricViewportFraction = when {
+                compactViewport -> 0.26f
+                useTabletLayout -> 0.36f
+                else -> 0.30f
+            },
+            topFadeLength = viewport?.topFadeLength ?: when {
+                compactViewport -> 24.dp
+                useTabletLayout -> 132.dp
+                else -> 80.dp
+            },
+            bottomFadeLength = viewport?.bottomFadeLength ?: when {
+                compactViewport -> 32.dp
+                useTabletLayout -> 220.dp
+                else -> 196.dp
+            },
             bottomContentInset = viewport?.bottomContentInset ?: if (useTabletLayout) 40.dp else 0.dp,
             onLyricLongClick = onLyricLongClick,
             onSeekTo = onSeekTo
@@ -1419,8 +1455,8 @@ internal fun LyricsContentPane(
         currentTimeMs = effectiveLyricTimeMs,
         modifier = Modifier.fillMaxSize(),
         textColor = textColor,
-        fontSize = scaledLyricFontSize(viewport?.baseFontSizeSp ?: 20f, lyricFontScale).sp,
-        centerPadding = 24.dp,
+        fontSize = scaledLyricFontSize(resolvedBaseFontSizeSp, lyricFontScale).sp,
+        centerPadding = if (compactViewport) 12.dp else 24.dp,
         visualSpec = LyricVisualSpec(
             activeScale = 1.06f,
             nearScale = 0.95f,
@@ -1444,7 +1480,8 @@ internal fun LyricsContentPane(
         edgeFadeHeight = viewport?.let { minOf(it.topFadeLength, it.bottomFadeLength) }
             ?: resolveLyricEdgeFadeHeight(isEmbedded = false),
         playbackSessionKey = playbackSessionKey,
-        stableEmbeddedViewport = true
+        stableEmbeddedViewport = true,
+        activeLineViewportFraction = if (compactViewport) 0.32f else 0.4f
     )
 }
 

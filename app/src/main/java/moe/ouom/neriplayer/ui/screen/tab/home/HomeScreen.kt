@@ -77,6 +77,7 @@ import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
@@ -441,32 +442,54 @@ fun HomeScreen(
                 .padding(top = if (isTabletDevice) 8.dp else 0.dp)
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
         ) {
-            LargeTopAppBar(
-                title = { Text(appBarTitle, modifier = Modifier.padding(start = appBarTitleInset)) },
-                actions = {
-                    HapticIconButton(
-                        enabled = !offlineMode,
-                        onClick = {
-                            if (isInternational) {
-                                vm.refreshYtMusicHome()
-                            } else {
-                                vm.refreshNeteaseHome()
-                            }
+            val appBarActions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {
+                HapticIconButton(
+                    enabled = !offlineMode,
+                    onClick = {
+                        if (isInternational) {
+                            vm.refreshYtMusicHome()
+                        } else {
+                            vm.refreshNeteaseHome()
                         }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Refresh,
-                            contentDescription = stringResource(CoreCommonR.string.recommend_refresh)
-                        )
                     }
-                },
-                scrollBehavior = scrollBehavior,
-                windowInsets = WindowInsets(0),
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = stringResource(CoreCommonR.string.recommend_refresh)
+                    )
+                }
+            }
+            // 手表这类超矮屏上，大标题会把首屏内容挤没，直接把标题收进普通顶栏
+            if (LocalConfiguration.current.screenHeightDp <= 420) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = appBarTitle,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            modifier = Modifier.padding(start = appBarTitleInset)
+                        )
+                    },
+                    actions = appBarActions,
+                    scrollBehavior = scrollBehavior,
+                    windowInsets = WindowInsets(0),
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        scrolledContainerColor = Color.Transparent
+                    )
                 )
-            )
+            } else {
+                LargeTopAppBar(
+                    title = { Text(appBarTitle, modifier = Modifier.padding(start = appBarTitleInset)) },
+                    actions = appBarActions,
+                    scrollBehavior = scrollBehavior,
+                    windowInsets = WindowInsets(0),
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        scrolledContainerColor = Color.Transparent
+                    )
+                )
+            }
 
             Box(
                 modifier = Modifier

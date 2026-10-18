@@ -583,6 +583,26 @@ internal fun resolveLyricEdgeFadeHeight(isEmbedded: Boolean): Dp {
     return if (isEmbedded) 56.dp else 72.dp
 }
 
+/** 上下渐隐最多各占视口的这个比例，保证中间始终有一条完整清晰的歌词带 */
+internal const val LyricEdgeFadeMaxViewportFraction = 0.16f
+
+/** 低于这个高度就按比例收敛渐隐（手表/小屏），手机与平板的观感保持不变 */
+internal val LyricCompactViewportThreshold = 460.dp
+
+/**
+ * 小屏（手表）歌词区高度很小时，固定 72dp 的渐隐会把整屏歌词冲淡，
+ * 这里按视口高度收敛遮罩，避免“当前歌词看不见 / 发白”的问题。
+ */
+internal fun resolveEffectiveLyricEdgeFadeHeight(
+    configured: Dp,
+    viewportHeight: Dp
+): Dp {
+    if (viewportHeight <= 0.dp || viewportHeight >= LyricCompactViewportThreshold) {
+        return configured
+    }
+    return minOf(configured, viewportHeight * LyricEdgeFadeMaxViewportFraction)
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
@@ -613,7 +633,8 @@ fun SyncedLyricsView(
     edgeFadeHeight: Dp = resolveLyricEdgeFadeHeight(isEmbedded = false),
     showEmbeddedTranslations: Boolean = true,
     playbackSessionKey: String? = null,
-    stableEmbeddedViewport: Boolean = false
+    stableEmbeddedViewport: Boolean = false,
+    activeLineViewportFraction: Float = 0.4f
 ) {
     val lyricScrollSessionKey = remember(playbackSessionKey, lyrics) {
         resolveLyricScrollSessionKey(playbackSessionKey, lyrics)
@@ -720,7 +741,7 @@ fun SyncedLyricsView(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        val centerPad = maxHeight / 2.5f
+        val centerPad = maxHeight * activeLineViewportFraction.coerceIn(0.2f, 0.6f)
         val maxTextWidth = (maxWidth - 48.dp).coerceAtLeast(0.dp)
         val embeddedOverflowPadding = resolveEmbeddedLyricHorizontalOverflowPadding(
             maxTextWidth = maxTextWidth,
@@ -740,7 +761,9 @@ fun SyncedLyricsView(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .fillMaxSize()
-                .verticalEdgeFade(fadeHeight = edgeFadeHeight)
+                .verticalEdgeFade(
+                    fadeHeight = resolveEffectiveLyricEdgeFadeHeight(edgeFadeHeight, maxHeight)
+                )
         ) {
             itemsIndexed(
                 items = lyrics,

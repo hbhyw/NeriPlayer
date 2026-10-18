@@ -144,6 +144,18 @@ fun AdvancedLyricsView(
 
     BoxWithConstraints(modifier = modifier) {
         val density = LocalDensity.current
+        // 小屏(手表)视口很矮, 固定 80/196dp 的渐隐会吃掉整屏歌词, 按视口比例收敛
+        val isCompactLyricViewport = maxHeight < LyricCompactViewportThreshold
+        val effectiveTopFadeLength = if (isCompactLyricViewport) {
+            minOf(topFadeLength, maxHeight * 0.16f)
+        } else {
+            topFadeLength
+        }
+        val effectiveBottomFadeLength = if (isCompactLyricViewport) {
+            minOf(bottomFadeLength, maxHeight * 0.20f)
+        } else {
+            bottomFadeLength
+        }
         val focusedLineVisualCompensation = with(density) {
             normalTextStyle.lineHeight.toDp() * FocusedLyricVisualCompensationRatio
         }
@@ -153,7 +165,7 @@ fun AdvancedLyricsView(
             minimumOffset = offset,
             playedLyricViewportFraction = playedLyricViewportFraction,
             focusedLineVisualCompensation = focusedLineVisualCompensation,
-            topFadeLength = topFadeLength
+            topFadeLength = effectiveTopFadeLength
         )
 
         CompositionLocalProvider(LocalTextStyle provides translationTextStyle) {
@@ -195,8 +207,8 @@ fun AdvancedLyricsView(
                 keepAliveZone = keepAliveZone,
                 bottomContentInset = bottomContentInset,
                 blurDelta = if (lowPowerRendering) blurDelta * 0.55f else blurDelta,
-                topFadeLength = topFadeLength,
-                bottomFadeLength = bottomFadeLength,
+                topFadeLength = effectiveTopFadeLength,
+                bottomFadeLength = effectiveBottomFadeLength,
                 focusedLineScale = 1.015f,
                 unfocusedLineScale = 0.965f,
                 activeLineAlpha = 1f,

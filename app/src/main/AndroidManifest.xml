@@ -3,8 +3,17 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- The bundled Media3 FFmpeg extension AAR is stamped with minSdk 28 while
+         NeriPlayer now ships down to Android 8.1 (API 27). The decoder is probed
+         defensively at runtime (FfmpegLibrary.isAvailable()), so the library is
+         safe to merge on 27 where the platform MediaCodec path is used instead. -->
+    <uses-sdk tools:overrideLibrary="androidx.media3.decoder.ffmpeg" />
+
     <uses-feature
         android:name="android.hardware.usb.host"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.type.watch"
         android:required="false" />
 
     <uses-permission android:name="android.permission.INTERNET" />

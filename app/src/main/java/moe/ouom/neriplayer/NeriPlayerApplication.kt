@@ -50,6 +50,7 @@ import moe.ouom.neriplayer.core.startup.app.YouTubeMusicUiGatewayInitializer
 import moe.ouom.neriplayer.core.player.shizuku.AndroidRuntimeCompatibility
 import moe.ouom.neriplayer.data.auth.youtube.YouTubeAuthRotationWorker
 import moe.ouom.neriplayer.data.local.media.metadata.LocalMediaMetadataRecoveryStore
+import moe.ouom.neriplayer.data.model.platform.currentProcessNameCompat
 import moe.ouom.neriplayer.data.playlist.favorite.FavoritePlaylistRepository
 import moe.ouom.neriplayer.data.settings.playback.readPlaybackPreferenceSnapshotSync
 import moe.ouom.neriplayer.util.crash.AnrWatchdog
@@ -85,7 +86,7 @@ class NeriPlayerApplication : Application(), WorkConfiguration.Provider {
         // 冷启动首个播放点击可能早于 Compose 的 SideEffect, 先把 Application 绑给播放器
         PlayerManager.bindApplication(this)
         val runningInMainProcess = AppProcessClassifier.isMainProcess(
-            currentProcessName = getProcessName(),
+            currentProcessName = currentProcessNameCompat(),
             configuredMainProcessName = applicationInfo.processName,
             packageName = packageName
         )
@@ -123,7 +124,7 @@ class NeriPlayerApplication : Application(), WorkConfiguration.Provider {
         super.onConfigurationChanged(newConfig)
         LanguageManager.applyLanguage(this)
         if (AppProcessClassifier.isMainProcess(
-                currentProcessName = getProcessName(),
+                currentProcessName = currentProcessNameCompat(),
                 configuredMainProcessName = applicationInfo.processName,
                 packageName = packageName,
             )
@@ -136,8 +137,13 @@ class NeriPlayerApplication : Application(), WorkConfiguration.Provider {
         if (runningInMainProcess) {
             return
         }
+        // WebView.setDataDirectorySuffix 是 API 28 引入的；
+        // 手表端要支持 Android 8.1，低版本忽略即可（多进程 WebView 数据目录隔离不可用）
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            return
+        }
         WebView.setDataDirectorySuffix(
-            WebViewDataDirectorySuffix.forProcess(getProcessName())
+            WebViewDataDirectorySuffix.forProcess(currentProcessNameCompat())
         )
     }
 

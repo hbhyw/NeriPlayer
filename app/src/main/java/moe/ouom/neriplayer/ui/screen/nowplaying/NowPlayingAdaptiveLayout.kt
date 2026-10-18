@@ -71,14 +71,31 @@ internal fun resolveNowPlayingControlBaseSizes(
     phoneLandscape: Boolean,
     wideLandscape: Boolean,
     compactWideLayout: Boolean,
-    compactPortrait: Boolean
+    compactPortrait: Boolean,
+    watchLayout: Boolean = false
 ): NowPlayingControlBaseSizes = when {
+    watchLayout -> NowPlayingControlBaseSizes(56.dp, 64.dp, 14.dp, 30.dp)
     phoneLandscape -> NowPlayingControlBaseSizes(36.dp, 40.dp, 12.dp, 20.dp)
     wideLandscape && compactWideLayout -> NowPlayingControlBaseSizes(42.dp, 46.dp, 18.dp, 24.dp)
     wideLandscape -> NowPlayingControlBaseSizes(46.dp, 50.dp, 22.dp, 24.dp)
     compactPortrait -> NowPlayingControlBaseSizes(42.dp, 42.dp, 12.dp, 24.dp)
     else -> NowPlayingControlBaseSizes(42.dp, 42.dp, 20.dp, 24.dp)
 }
+
+// 注意：这里的可用高度是 Compose 密度（手表上已乘 0.8）下的 dp，
+// 402x476px 的手表在这个坐标系里约 432dp 高，所以阈值取 460dp。
+private const val NowPlayingWatchMaxHeightDp = 460f
+private val NowPlayingWatchCoverMaxSize = 150.dp
+
+/** 手表这类超矮竖屏：封面要给控件让位，否则播放键会被挤到屏幕外。 */
+internal fun shouldUseNowPlayingWatchLayout(availableHeightDp: Float): Boolean =
+    availableHeightDp > 0f && availableHeightDp <= NowPlayingWatchMaxHeightDp
+
+internal fun resolveNowPlayingWatchCoverSize(availableWidth: Dp, availableHeight: Dp): Dp =
+    minOf(availableWidth * 0.22f, availableHeight * 0.14f, NowPlayingWatchCoverMaxSize)
+
+/** 手表播放页内嵌歌词条的固定高度：一句当前 + 一句下一句。 */
+internal val NowPlayingWatchLyricStripHeight = 54.dp
 
 internal data class NowPlayingWideLayoutSpec(
     val compactHeight: Boolean,

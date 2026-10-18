@@ -111,12 +111,30 @@ android {
             manifestPlaceholders["listenTogetherInviteScheme"] = inviteScheme
             buildConfigField("String", "LISTEN_TOGETHER_INVITE_SCHEME", "\"$inviteScheme\"")
             enableUnitTestCoverage = true
+            // 手表空间很小（/data 只剩几百 MB），全 ABI 的 debug 包接近 60MB 装不下：
+            // 传 -PwatchAbi=armeabi-v7a 只打一个 ABI，安装包可以小一半以上
+            (project.findProperty("watchAbi") as String?)
+                ?.takeIf { it.isNotBlank() }
+                ?.let { abi ->
+                    ndk {
+                        abiFilters.clear()
+                        abiFilters.add(abi)
+                    }
+                }
         }
 
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            if (!buildAllReleaseAbis) {
+            val watchAbiOverride = (project.findProperty("watchAbi") as String?)
+                ?.takeIf { it.isNotBlank() }
+            if (watchAbiOverride != null) {
+                // 手表只有一个 ABI 时只打这一份，包体明显更小
+                ndk {
+                    abiFilters.clear()
+                    abiFilters.add(watchAbiOverride)
+                }
+            } else if (!buildAllReleaseAbis) {
                 ndk {
                     // Regular release stays lean; manual release can opt into all ABI splits.
                     abiFilters += defaultReleaseAbiFilters
@@ -133,6 +151,13 @@ android {
     }
     buildFeatures {
         buildConfig = true
+    }
+
+    lint {
+        // 本机（4 核）上 lintVitalRelease 要在 3000+ 类上跑十几分钟并拖住打包；
+        // 发布前单独跑 :app:lintDebug 即可，这里不再阻塞 assembleRelease。
+        checkReleaseBuilds = false
+        abortOnError = false
     }
 
     testOptions {

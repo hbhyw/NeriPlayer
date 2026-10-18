@@ -959,6 +959,8 @@ fun NowPlayingScreen(
         availableHeightDp = windowHeightDp.value,
         uiDensityScale = uiDensityScale
     )
+    val useWatchNowPlayingLayout =
+        !isLandscape && shouldUseNowPlayingWatchLayout(windowHeightDp.value)
     val showCoverPageLyrics = shouldShowNowPlayingCoverLyrics(
         coverLyricsEnabled = nowPlayingCoverLyricsEnabled,
         useCompactPortraitLayout = useCompactPortraitLayout
@@ -976,7 +978,8 @@ fun NowPlayingScreen(
         phoneLandscape = phoneLandscape,
         wideLandscape = useWideLandscapeLayout,
         compactWideLayout = windowWidthDp < 720.dp,
-        compactPortrait = useCompactPortraitLayout
+        compactPortrait = useCompactPortraitLayout,
+        watchLayout = useWatchNowPlayingLayout
     )
     val lowPowerLyricsRendering = remember(context, showLyricsScreen) { context.isSystemPowerSaveMode() }
 
@@ -1506,10 +1509,24 @@ fun NowPlayingScreen(
                         val mainColumnContent: @Composable ColumnScope.() -> Unit = {
                             coverTopBar()
                             Spacer(Modifier.height(8.dp))
-                            coverPanel(
-                                Modifier.nowPlayingCoverPanelModifier(false, this),
-                                null
-                            )
+                            if (useWatchNowPlayingLayout) {
+                                // 小屏手表：封面缩小，把高度让给放大的播放控件
+                                val watchCoverSize = resolveNowPlayingWatchCoverSize(
+                                    windowWidthDp,
+                                    windowHeightDp
+                                )
+                                coverPanel(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(watchCoverSize),
+                                    watchCoverSize
+                                )
+                            } else {
+                                coverPanel(
+                                    Modifier.nowPlayingCoverPanelModifier(false, this),
+                                    null
+                                )
+                            }
                             Spacer(Modifier.height(16.dp))
                             trackIdentity(false)
 

@@ -1,11 +1,11 @@
 package moe.ouom.neriplayer.data.local.database
 
-import android.app.Application
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
+import moe.ouom.neriplayer.data.model.platform.currentProcessNameCompat
 import moe.ouom.neriplayer.data.local.database.dao.LocalPlaylistDao
 import moe.ouom.neriplayer.data.local.database.dao.PlayHistoryDao
 import moe.ouom.neriplayer.data.local.database.dao.stats.PlaylistUsageDao
@@ -231,7 +231,7 @@ abstract class NeriUserDataDatabase : RoomDatabase() {
 
         private fun checkMainProcess(context: Context) {
             val expectedProcess = context.applicationInfo.processName
-            val currentProcess = Application.getProcessName()
+            val currentProcess = currentProcessNameCompat()
             check(currentProcess == expectedProcess) {
                 "Neri user database may only be opened in the main process: " +
                     "current=$currentProcess expected=$expectedProcess"

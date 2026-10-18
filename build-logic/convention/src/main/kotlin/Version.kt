@@ -7,10 +7,11 @@ object Version {
     val java = JavaVersion.VERSION_17
 
     const val compileSdkVersion = 37
-    const val minSdk = 28
+    // Watch port: Android 8.1 (API 27) is the lowest supported wearable baseline.
+    const val minSdk = 27
     const val targetSdk = 36
 
-    private const val defaultNdkVersion = "27.0.12077973"
+    private const val defaultNdkVersion = "28.2.13676358"
     private const val defaultCMakeVersion = "3.28.0+"
 
     fun getNdkVersion(): String {
